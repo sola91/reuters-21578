@@ -1,25 +1,67 @@
-import string
 import re 
 from nltk.corpus import stopwords as sw
 from nltk.stem.porter import PorterStemmer
 from nltk import word_tokenize
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import MultiLabelBinarizer
+from itertools import chain
 
-
-class DocumentPreprocessor():
-
-    def __init__(self, stemmer=None, stopwords=None, min_length=3):
-        self.stemmer = stemmer or PorterStemmer()
-        self.stopwords = stopwords or (sw.words('english') + list(string.punctuation))
-
-    def __tokenize(self, text):
-        min_length = 3
+class ReutersPreprocessor():
+    """
+    Class used to preprocess the data 
+    
+    :stemmer: Stemmer class to be appliedduring tokenization
+    :stopwords: Set of stopwords to be removed from all the documents
+    :min_length: Minimum length of a valid token
+    """
+    def __init__(self, stemmer=PorterStemmer(), stopwords=sw.words('english'), min_length=3):
+        self.stemmer = stemmer 
+        self.stopwords = stopwords
+        self.min_length = min_length
+        
+    def tokenize(self, text):
+        """
+        Given a text, returns a list of tokens according to the following rules:
+        1 - apply a specified stemming algorithm, 
+        2 - remove stop words and consider only alpha-numeric characters
+        3 - consider only tokens with length >= min_length 
+        """
         words = map(lambda word: word.lower(), word_tokenize(text))
         words = [word for word in words if word not in self.stopwords]
-        tokens = (list(map(lambda token: self.stemmer.stem(token), words)))
+        tokens = (list(map(lambda token: PorterStemmer().stem(token),words)))
         p = re.compile('[a-zA-Z]+');
-        filtered_tokens = list(filter (lambda token: p.match(token) and len(token) >= min_length, tokens))
+        filtered_tokens = list(filter (lambda token: p.match(token) and len(token) >= self.min_length,tokens))
         return filtered_tokens
-    
-    
-    #transfor
-    def __
+
+        #words = map(lambda word: word.lower(), word_tokenize(text))
+        #words = [word for word in words if word not in self.stopwords]
+        #tokens = (list(map(lambda token: self.stemmer.stem(token), words)))
+        #tokens_alphanumeric = list(filter (lambda token: re.match('^[A-Za-z]+',token), tokens))
+        #filtered_tokens = list(filter (lambda token: len(token) >= self.min_length, tokens_alphanumeric))
+        #return filtered_tokens
+        
+    def pre_process(self, documents):
+        """
+        Preprocess the reuters-21578 document collection and return a split in 
+        train and test set according to the chosen splitting criterion
+        """
+               
+        train_documents = documents[(documents.lewissplit == "TRAIN")]
+        
+        train_category_list = [doc for doc in train_documents["topics"]]
+        train_category_set =  set(chain(*train_category_list)) 
+        test_documents = documents[(documents.lewissplit == "TEST")]
+
+        #From test set we need to remove the topics that are not in the train set
+        test_documents["topics"] = test_documents["topics"].apply(lambda x: [entry for entry in x if entry in train_category_set])
+        
+        vectorizer = TfidfVectorizer(tokenizer=self.tokenize,min_df=2)
+        vec_train_documents = vectorizer.fit_transform(train_documents["text"])
+        vec_test_documents = vectorizer.transform(test_documents["text"])
+ 
+        # Transform multilabel labels
+        mlb = MultiLabelBinarizer()
+        train_labels = mlb.fit_transform([doc for doc in train_documents["topics"]])
+        test_labels = mlb.transform([doc for doc in test_documents["topics"]])
+        
+        return vec_train_documents, vec_test_documents, train_labels, test_labels

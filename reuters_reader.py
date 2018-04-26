@@ -6,12 +6,14 @@ import re
 from html.parser import HTMLParser
 
 
-"""
-Parser of a single SGML file of the reuters-21578 collection. 
-"""
 class ReutersSGMLParser(HTMLParser):
-    def __init__(self, verbose=0):
+    """
+    Parser of a single SGML file of the reuters-21578 collection. 
+    """
+
+    def __init__(self, encoding='latin-1'):
         HTMLParser.__init__(self)
+        self.encoding = encoding
         self._reset()
 
     def _reset(self):
@@ -24,14 +26,17 @@ class ReutersSGMLParser(HTMLParser):
         self.topics = []
         self.topic_d = ""
         self.lewissplit= ""
+        self.topics_attribute= ""
 
     def parse(self, fd):
         self.docs = []
-        self.feed(fd)
-        for doc in self.docs:
-            yield doc
+        for chunk in fd:
+            self.feed(chunk.decode(self.encoding))
+            for doc in self.docs:
+                yield doc
+            self.docs = []
         self.close()
-    
+
     def handle_data(self, data):
         if self.in_body:
             self.body += data
@@ -44,6 +49,7 @@ class ReutersSGMLParser(HTMLParser):
         if tag == "reuters":
             attributes_dict = dict(attributes)
             self.lewissplit = attributes_dict["lewissplit"]
+            self.topics_attribute = attributes_dict["topics"]
         elif tag == "title":
             self.in_title = 1
         elif tag == "body":
@@ -59,7 +65,8 @@ class ReutersSGMLParser(HTMLParser):
             self.docs.append({'title': self.title,
                           'body': self.body,
                           'topics': self.topics,
-                          'lewissplit': self.lewissplit})
+                          'lewissplit': self.lewissplit,
+                          'topics_attribute': self.topics_attribute})
             self._reset()
         elif tag == "title":
             self.in_title = 0
@@ -75,37 +82,47 @@ class ReutersSGMLParser(HTMLParser):
 
 
 class ReutersReader():
-    
-    def __init__(self, data_path):
-        self.data_path = data_path
-        
-        
     """
-    Iterate through all the .sgm files and returns a generator cointaining all the documents
-    in the router-21578 collection
-    """    
-    def __fetch_documents_generator(self):   
+    Class used to read the reuters-21578 collection
+    
+    :data_path = relative path to the folder containing the source SGML files
+    :split = choose between ModApte and ModLewis splits.
+    """        
+
+    def __init__(self, data_path, split = "ModApte"):
+        self.data_path = data_path
+        self.split = split
+        
+        
+    def fetch_documents_generator(self):   
+        """
+        Iterate through all the SGML files and returns a generator cointaining all the documents
+        in the router-21578 collection
+        """    
+        
         for root, _dirnames, filenames in os.walk(self.data_path):
             for filename in fnmatch.filter(filenames, '*.sgm'):
                 path = os.path.join(root, filename)
                 parser = ReutersSGMLParser()
-                for doc in parser.parse(open(path, encoding='utf-8', errors='replace').read()):
+                for doc in parser.parse(open(path,'rb')):
                     yield doc
     
     
-    """
-    Return a dataframe containing one row for each document that has at least
-    one topic assigned.
-    """
     def get_documents(self):
-    
-        doc_generator = self.__fetch_documents_generator()
-        data = [('{title}\n\n{body}'.format(**doc), doc['topics'], doc["lewissplit"])
+        """
+        Returns a dataframe containing one row for each document
+        """
+      
+        doc_generator = self.fetch_documents_generator()
+        
+        if self.split == "ModLewis":
+            data = [('{title}\n\n{body}'.format(**doc), doc['topics'], doc["lewissplit"])
             for doc in itertools.chain(doc_generator)
-            if doc['topics']]
-    
-        if not len(data):
-            return DataFrame([])
+            if doc["lewissplit"] != 'NOT-USED' and doc["topics_attribute"] != "BYPASS"]
         else:
-            return DataFrame(data, columns=['text', 'topics','lewissplit'])
+            data = [('{title}\n\n{body}'.format(**doc), doc['topics'], doc["lewissplit"])
+            for doc in itertools.chain(doc_generator)
+            if doc["lewissplit"] != 'NOT-USED' and doc["topics_attribute"] == "YES"]
+        
+        return DataFrame(data, columns=['text', 'topics','lewissplit'])
        
