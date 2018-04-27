@@ -7,6 +7,9 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, hamming_loss
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import RandomForestClassifier,AdaBoostClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
 
 
 def SVC_classifier(vec_train_documents, train_labels, parameters):
@@ -34,7 +37,7 @@ def evaluate(test_labels, predictions):
     print("Accuracy: {:.4f}, Hamming Loss: {:.4f}".format(accuracy, hamming))
     
     
-def run_grid_search(name, classifier, parameters,vec_train_documents, train_labels):
+def run_grid_search(classifier, parameters,vec_train_documents, train_labels):
     grid_search = GridSearchCV(estimator = classifier,
                                param_grid = parameters,
                                scoring = 'f1_weighted',
@@ -46,32 +49,58 @@ def run_grid_search(name, classifier, parameters,vec_train_documents, train_labe
 
 def main(argv):
    
-    documents = ReutersReader('data').get_documents()
+    documents = ReutersReader(data_path='data',split='ModLewis').get_documents()
     vec_train_documents, vec_test_documents, train_labels, test_labels = ReutersPreprocessor().pre_process(documents)
 
     if len(argv) > 1:
         if "--linearsvc" == argv[len(argv) - 1]:
             parameters = [{'estimator__C' : [1,10,50,100], 'estimator__loss': ['squared_hinge','hinge']}]
             classifier = OneVsRestClassifier(LinearSVC())
-            best_score, best_params = run_grid_search('LinearSVC', classifier,
+            best_score, best_params = run_grid_search( classifier,
                     parameters, vec_train_documents, train_labels)
             print ("best f1-weighted score: {0}".format(best_score))
             print ("best parameters: {0}".format(best_params))
         if  "--knn" == argv[len(argv) - 1]:
             parameters = [{'n_neighbors' : [5,10,15,25,50,75], 'weights': ['uniform','distance']}]
             classifier = KNeighborsClassifier()
-            best_score, best_params = run_grid_search('KNeighborsClassifier', classifier,
+            best_score, best_params = run_grid_search( classifier,
                     parameters, vec_train_documents, train_labels)
             print ("best f1-weighted score: {0}".format(best_score))
             print ("best parameters: {0}".format(best_params))
-           
+        if  "--logisticregression" == argv[len(argv) - 1]:
+            parameters = [{'estimator__penalty' : ['l1','l2'], 'estimator__C': [5.0,25,35,50]}]
+            classifier = OneVsRestClassifier(LogisticRegression())
+            best_score, best_params = run_grid_search(classifier,
+                    parameters, vec_train_documents, train_labels)
+            print ("best f1-weighted score: {0}".format(best_score))
+            print ("best parameters: {0}".format(best_params))
+        if  "--randomforest" == argv[len(argv) - 1]:
+            parameters = [{}]
+            classifier = RandomForestClassifier()
+            best_score, best_params = run_grid_search(classifier,
+                    parameters, vec_train_documents, train_labels)
+            print ("best f1-weighted score: {0}".format(best_score))
+            print ("best parameters: {0}".format(best_params))        
+    else:
+        print("Please insert a valid input")
+            
+            
             
             classifier = KNeighborsClassifier(n_neighbors=75,weights="uniform")
             classifier.fit(vec_train_documents, train_labels)
             predictions = classifier.predict(vec_test_documents)
             evaluate(test_labels,predictions)
             
-            
+            classifier = RandomForestClassifier(n_estimators=500)
+            classifier.fit(vec_train_documents, train_labels)
+            predictions = classifier.predict(vec_test_documents)
+            evaluate(test_labels,predictions)
+      
+            classifier = OneVsRestClassifier(LogisticRegression(C=15, penalty='l1'))
+            classifier.fit(vec_train_documents, train_labels)
+            predictions = classifier.predict(vec_test_documents)
+            evaluate(test_labels,predictions)
+                
             
 if __name__ == "__main__":
     main(sys.argv[0:])

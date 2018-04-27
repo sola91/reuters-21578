@@ -10,7 +10,7 @@ class ReutersPreprocessor():
     """
     Class used to preprocess the data 
     
-    :stemmer: Stemmer class to be appliedduring tokenization
+    :stemmer: Stemmer class to be applied during tokenization
     :stopwords: Set of stopwords to be removed from all the documents
     :min_length: Minimum length of a valid token
     """
@@ -29,21 +29,14 @@ class ReutersPreprocessor():
         words = map(lambda word: word.lower(), word_tokenize(text))
         words = [word for word in words if word not in self.stopwords]
         tokens = (list(map(lambda token: PorterStemmer().stem(token),words)))
-        p = re.compile('[a-zA-Z]+');
-        filtered_tokens = list(filter (lambda token: p.match(token) and len(token) >= self.min_length,tokens))
+        filtered_tokens = list(filter (lambda token: re.match('[a-zA-Z]+', token) and len(token) >= self.min_length,tokens))
         return filtered_tokens
 
-        #words = map(lambda word: word.lower(), word_tokenize(text))
-        #words = [word for word in words if word not in self.stopwords]
-        #tokens = (list(map(lambda token: self.stemmer.stem(token), words)))
-        #tokens_alphanumeric = list(filter (lambda token: re.match('^[A-Za-z]+',token), tokens))
-        #filtered_tokens = list(filter (lambda token: len(token) >= self.min_length, tokens_alphanumeric))
-        #return filtered_tokens
         
     def pre_process(self, documents):
         """
-        Preprocess the reuters-21578 document collection and return a split in 
-        train and test set according to the chosen splitting criterion
+        Preprocess the reuters-21578 document collection and returns
+        train and test.
         """
                
         train_documents = documents[(documents.lewissplit == "TRAIN")]
@@ -52,14 +45,15 @@ class ReutersPreprocessor():
         train_category_set =  set(chain(*train_category_list)) 
         test_documents = documents[(documents.lewissplit == "TEST")]
 
-        #From test set we need to remove the topics that are not in the train set
-        test_documents["topics"] = test_documents["topics"].apply(lambda x: [entry for entry in x if entry in train_category_set])
+        #From the test set, we need to remove the topics that are not present in the train set
+        test_documents.loc[:,"topics"] = test_documents.topics.apply(lambda x: [entry for entry in x if entry in train_category_set])
         
+        #Vectorize the data using the tf-idf method
         vectorizer = TfidfVectorizer(tokenizer=self.tokenize,min_df=2)
         vec_train_documents = vectorizer.fit_transform(train_documents["text"])
         vec_test_documents = vectorizer.transform(test_documents["text"])
  
-        # Transform multilabel labels
+        # Transform labels for multi label classification
         mlb = MultiLabelBinarizer()
         train_labels = mlb.fit_transform([doc for doc in train_documents["topics"]])
         test_labels = mlb.transform([doc for doc in test_documents["topics"]])
