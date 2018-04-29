@@ -1,7 +1,6 @@
 import sys
 from reuters_reader import ReutersReader
 from reuters_preprocessor import ReutersPreprocessor
- 
 from sklearn.svm import LinearSVC
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, hamming_loss
@@ -19,11 +18,11 @@ def evaluate_model(test_labels, predictions):
     print("Micro-average quality numbers")
     print("Precision: {:.4f}, Recall: {:.4f}, F1-measure: {:.4f}".format(precision, recall, f1))
 
-    precision = precision_score(test_labels, predictions, average='weighted')
-    recall = recall_score(test_labels, predictions, average='weighted')
-    f1 = f1_score(test_labels, predictions, average='weighted')
+    precision = precision_score(test_labels, predictions, average='macro')
+    recall = recall_score(test_labels, predictions, average='macro')
+    f1 = f1_score(test_labels, predictions, average='macro')
 
-    print("Weighted-average quality numbers")
+    print("Macro-average quality numbers")
     print("Precision: {:.4f}, Recall: {:.4f}, F1-measure: {:.4f}".format(precision, recall, f1))
     
     print("Global measures")
@@ -54,7 +53,7 @@ def main(argv):
          test_and_evaluate_model(classifier)
       
      elif  "--randomforest" == argv[len(argv) - 1]:
-         classifier = RandomForestClassifier()
+         classifier = RandomForestClassifier(n_estimators=100, criterion='gini')
          test_and_evaluate_model(classifier)
 
      else:    

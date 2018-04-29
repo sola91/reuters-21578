@@ -7,14 +7,14 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-
+import numpy as np
   
 def run_grid_search(classifier, parameters):
     documents = ReutersReader(data_path='data',split='ModApte').get_documents()
     vectorized_train_documents, train_labels, _, _ = ReutersPreprocessor().pre_process(documents)
     grid_search = GridSearchCV(estimator = classifier,
                                param_grid = parameters,
-                               scoring = 'f1_weighted',
+                               scoring = 'f1_micro',
                                cv=7)
     grid_search.fit(vectorized_train_documents, train_labels)
     print ("best f1-weighted score: {0}".format(grid_search.best_score_))
@@ -41,7 +41,7 @@ def main(argv):
             run_grid_search(classifier,parameters)
 
         elif  "--randomforest" == argv[len(argv) - 1]:
-            parameters = [{}]
+            parameters = [{'n_estimators': np.arange(50,200,50), 'criterion': ['gini','entropy']}]
             classifier = RandomForestClassifier()
             run_grid_search(classifier,parameters)
        
