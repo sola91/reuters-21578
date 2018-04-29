@@ -3,16 +3,19 @@
 ### Requirements
 <br />
 To install these packages, use the following command in a <a href="http://docs.python-guide.org/en/latest/dev/virtualenvs/" target="_blank"> virtualenv</a>.
+
 ```bash
 $ pip3 install -r requirements.txt
 ```
+<br />
 In alternative, install the packages listed in requirement.txt file manually
+<br />
 NOTE: The code works only with python >= 3.5
 
 ### Training data
-.
 <br />
-Available in sgm format in:
+Available in sgm format in the folder:
+
 ```bash
 data/ 
 ```
