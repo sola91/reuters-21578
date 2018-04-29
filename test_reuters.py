@@ -10,6 +10,8 @@ from sklearn.linear_model import LogisticRegression
 
 
 def evaluate_model(test_labels, predictions):
+    """Calculate the main evaluation criteria for a given model"""
+    
     accuracy = accuracy_score(test_labels, predictions)
     hamming = hamming_loss(test_labels, predictions)
     precision = precision_score(test_labels, predictions, average='micro')
@@ -57,9 +59,9 @@ def main(argv):
          test_and_evaluate_model(classifier)
 
      else:    
-         print("Please insert a valid input")
+         print("Please insert a valid argument")
   else:
-     print("Please insert a valid input")
+     print("Please insert a valid argument")
             
   
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ def run_grid_search(classifier, parameters):
     grid_search = GridSearchCV(estimator = classifier,
                                param_grid = parameters,
                                scoring = 'f1_micro',
-                               cv=7)
+                               cv=10)
     grid_search.fit(vectorized_train_documents, train_labels)
     print ("best f1-weighted score: {0}".format(grid_search.best_score_))
     print ("best parameters: {0}".format(grid_search.best_params_))    
@@ -46,10 +46,10 @@ def main(argv):
             run_grid_search(classifier,parameters)
        
         else:    
-            print("Please insert a valid input")
+            print("Please insert a valid argument")
             
     else:
-        print("Please insert a valid input")
+        print("Please insert a valid argument")
                       
           
 if __name__ == "__main__":
